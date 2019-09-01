@@ -1,0 +1,88 @@
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
+uchar4 *img;
+uchar4 *dev_img;
+
+void initHistogram(int histogram[], int &mid, int idy, int h, int w, int r) {
+    int hTop = MAX(idy - r, 0);
+    int hBot = MIN(idy + r, h - 1);
+    int wRight = MIN(r, w - 1);
+    for (int i = 0; i < 256; ++i) {
+        histogram[i] = 0;
+    }
+    mid = (hBot - hTop + 1) * (wRight + 1)/2;
+    for (int i = hTop; i <= hBot; ++i) {
+        for (int j = 0; j <= wRight; ++j) {
+            histogram[img[i * w + j].x] += 1;
+        }
+    }
+    return;
+}
+
+void updateHistogram(int histogram[], int &mid, int idy, int idx, int h, int w, int r) {
+    int hTop = MAX(idy - r, 0);
+    int hBot = MIN(idy + r, h - 1);
+    int wRight = MIN(idx + r, w - 1);
+    int wLeft = MAX(idx - r, 0);
+    mid = (hBot - hTop + 1) * (wRight - wLeft + 1)/2;
+    for (int i = hTop; i <= hBot; ++i) {
+        if (idx - r - 1 >= 0) {
+            histogram[img[wLeft - 1 + i * w].x] -= 1;
+        }
+        if (idx + r <= h - 1) {
+            histogram[img[wRight + i * w].x] += 1;
+        }
+    }
+    return;
+}
+int findMedian(int histogram[], int mid) {
+    int i = 0, count = 0;
+    for (; count <= mid; ++i) {
+        count += histogram[i];
+    }
+    return i - 1;
+}
+
+void MedianFilter(uchar4 *res, int h, int w, int r) {
+    for (int i = 0; i < h; i += 1) {
+        int histogram[256];
+        int mid;
+        initHistogram(histogram, mid, i, h, w, r);
+        res[i*w].x = findMedian(histogram, mid);
+        for (int j = 1; j < w; ++j) {
+            updateHistogram(histogram, mid, i, j, h, w, r);
+            res[i*w + j].x = findMedian(histogram, mid);
+        }
+
+    }
+}
+
+
+int main() {
+    char  inputFileName[256], outFileName[256];
+    //scanf("%s", inputFileName);
+    //scanf("%s", outFileName);
+    int w, h, r = 2;
+    FILE *inFile = fopen("in.data", "rb");
+    fread(&w, sizeof(int), 1, inFile);
+    fread(&h, sizeof(int), 1, inFile);
+    img = (uchar4*)malloc(sizeof(uchar4) * h * w);
+    dev_img = (uchar4*)malloc(sizeof(uchar4) * h * w);
+    fread(img, sizeof(uchar4), h * w, inFile);
+    fclose(inFile);
+    MedianFilter(dev_img, h, w, r);
+    for (int i = 0; i < 9; i++) {
+        printf("%d ", img[i].x);
+        printf("%d ", dev_img[i].x);
+        printf("\n");
+    }
+   
+    return 0;
+}
