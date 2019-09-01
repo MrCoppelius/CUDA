@@ -332,7 +332,7 @@ ASALocalRun/
 .mfractor/
 
 
-.asc
-.pdf
-.doc
-.docx
+*.asc
+*.pdf
+*.doc
+*.docx
