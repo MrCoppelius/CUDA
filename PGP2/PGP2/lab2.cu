@@ -1,4 +1,4 @@
-/*#include "cuda_runtime.h"
+#include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -142,4 +142,4 @@ int main() {
 
     free(img);
     return 0;
-} */
+}
